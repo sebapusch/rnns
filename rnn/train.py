@@ -2,6 +2,8 @@ import numpy as np
 
 from rnn.rnn import RNN
 
+from helpers import bce
+
 def train_rnn(rnn: RNN, X: np.ndarray, Y: np.ndarray, epochs: int, lr: float) -> RNN:
     T = len(X[0])
 
@@ -17,7 +19,7 @@ def train_rnn(rnn: RNN, X: np.ndarray, Y: np.ndarray, epochs: int, lr: float) ->
                 z, h = rnn.step(X[s][t], h)
                 hidden_states[t] = h
 
-            total_loss += -(Y[s] * np.log(z) + (1 - Y[s]) * np.log(1 - z))
+            total_loss += -bce(z, Y[s])
 
             grad_o = z - Y[s]
 
