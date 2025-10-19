@@ -73,9 +73,9 @@ def main():
                 grad_Whh += np.outer(grad_a[t], hidden_states[t - 1].T)
                 grad_Whx += np.outer(grad_a[t], np.append(sample_x[s][t], 1).T)
             
-            rnn.W_oh += LR * -grad_Woh
-            rnn.W_hh += LR * -grad_Whh
-            rnn.W_hx += LR * -grad_Whx
+            rnn.W_oh -= LR * grad_Woh
+            rnn.W_hh -= LR * grad_Whh
+            rnn.W_hx -= LR * grad_Whx
 
         print(f'loss at epoch {e}: {total_loss / len(sample_y)}')
 
