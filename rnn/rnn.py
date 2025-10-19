@@ -7,7 +7,6 @@ class RNN:
                  input_size: int, 
                  output_size: int, 
                  hidden_state_size: int,
-                 hidden_state: None | np.ndarray = None
                 ) -> None:
         
         # include bias terms
@@ -15,22 +14,23 @@ class RNN:
         self.W_hh = self._init_random((hidden_state_size, hidden_state_size + 1))
         self.W_oh = self._init_random((output_size, hidden_state_size + 1))
 
-        self.initial_state = np.zeros(shape=(hidden_state_size,)) if hidden_state is None else hidden_state.copy()
+    @property
+    def hidden_state_size(self) -> int:
+        return self.W_hh.shape[0]
 
-        self.reset_hidden_state()
+    def step(self, x: np.ndarray, h: np.ndarray | None = None) -> Tuple[np.ndarray, np.ndarray]:
+        if h is None:
+            h = np.zeros(shape=self.W_hh.shape[1])
+        else:
+            h = np.append(h, 1)
 
-    def reset_hidden_state(self) -> None:
-        self.h = self.initial_state.copy()
-
-    def step(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        assert h is not None
+            
         x = np.append(x, 1)
-        h = np.append(self.h, 1)
 
-        self.h = self.W_hh @ h.T + self.W_hx @ x.T
+        h_next = self.W_hh @ h.T + self.W_hx @ x.T
 
-        h_next = np.append(self.h, 1)
-
-        return self._sigmoid(self.W_oh @ h_next.T), h_next
+        return self._sigmoid(self.W_oh @ np.append(h_next, 1).T), h_next
     
     def _sigmoid(self, y: np.ndarray):
         return 1 / (1 + np.exp(-y))
