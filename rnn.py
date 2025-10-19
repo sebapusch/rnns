@@ -1,5 +1,7 @@
 import numpy as np
 
+from typing import Tuple
+
 class RNN:
     def __init__(self, 
                  input_size: int, 
@@ -7,25 +9,33 @@ class RNN:
                  hidden_state_size: int,
                  hidden_state: None | np.ndarray = None
                 ) -> None:
-        self.weights_hx = np.random.random(size=(hidden_state_size, input_size + 1)) # bias term
-        self.weights_hh = np.random.random(size=(hidden_state_size, hidden_state_size + 1))
-        self.weights_oh = np.random.random(size=(output_size, hidden_state_size + 1))
+        
+        # include bias terms
+        self.W_hx = self._init_random((hidden_state_size, input_size + 1))
+        self.W_hh = self._init_random((hidden_state_size, hidden_state_size + 1))
+        self.W_oh = self._init_random((output_size, hidden_state_size + 1))
 
-        self.initial_state = np.zeros_like(hidden_state_size) if hidden_state is None else hidden_state.copy()
+        self.initial_state = np.zeros(shape=(hidden_state_size,)) if hidden_state is None else hidden_state.copy()
 
         self.reset_hidden_state()
 
     def reset_hidden_state(self) -> None:
-        self.hidden_state = self.initial_state.copy()
+        self.h = self.initial_state.copy()
 
-    def step(self, inp: np.ndarray) -> np.ndarray:
-        inp = np.concatenate((inp, [1]))
+    def step(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        x = np.append(x, 1)
+        h = np.append(self.h, 1)
 
-        hidden_state = np.concatenate((self.hidden_state, [1]))
-        self.hidden_state = self.weights_hh @ hidden_state.T + self.weights_hx @ inp.T
-        hidden_state = np.concatenate((self.hidden_state, [1]))
+        self.h = self.W_hh @ h.T + self.W_hx @ x.T
 
-        return self._sigmoid(self.weights_oh @ hidden_state.T)
+        h_next = np.append(self.h, 1)
+
+        return self._sigmoid(self.W_oh @ h_next.T), h_next
     
     def _sigmoid(self, y: np.ndarray):
-        return 1 / (1 + np.pow(np.e, -y))
+        return 1 / (1 + np.exp(-y))
+    
+    def _init_random(self, size, scale: float = 1e-3) -> np.ndarray:
+        return np.random.random(size=size).astype(np.float64) * scale 
+        
+
