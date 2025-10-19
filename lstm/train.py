@@ -81,8 +81,6 @@ def train_lstm_classifier(lstm: LSTMClassifier, X: np.ndarray, Y: np.ndarray, ep
                 grad_Wo += np.outer(grad_a_o, x_t)
                 grad_Wc += np.outer(grad_a_c, x_t)
 
-            print(lstm.W_z.shape, grad_Wz.shape)
-
             lstm.W_f -= lr * grad_Wf
             lstm.W_i -= lr * grad_Wi
             lstm.W_o -= lr * grad_Wo
