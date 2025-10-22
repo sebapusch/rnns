@@ -89,6 +89,4 @@ def train_lstm_classifier(lstm: LSTMClassifier, X: np.ndarray, Y: np.ndarray, ep
         
         print(f'loss at epoch {e}: {total_loss / len(Y)}')
 
-
-
     return lstm
