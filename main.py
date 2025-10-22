@@ -2,6 +2,8 @@ from rnn.rnn import RNN
 from rnn.train import train_rnn
 from lstm.lstm import LSTMClassifier
 from lstm.train import train_lstm_classifier
+from hopfield.hopfield import Hopfield
+from hopfield.helpers import make_digits, print_digit, corrupt_pattern
 
 import numpy as np
 
@@ -9,6 +11,17 @@ import numpy as np
 HIDDEN_STATE_SIZE = 10
 LR = 5e-1
 EPOCHS = 10
+
+def test_hopfield() -> None:
+    hn = Hopfield(50 ** 2)
+
+    digits = make_digits(size=50, thickness=4)
+
+    hn.train_implicit(digits)
+
+    print_digit(digits[4])
+    hn.recall(corrupt_pattern(digits[5], 0.01), print_digit)
+
 
 
 def test_lstm(X: np.ndarray, Y: np.ndarray) -> None:
@@ -45,7 +58,9 @@ def main():
         1,
     ])
 
-    test_lstm(sample_x, sample_y)
+    test_hopfield()
+
+    # test_lstm(sample_x, sample_y)
 
     # train_rnn(rnn, sample_x, sample_y, EPOCHS, LR)
 
