@@ -1,6 +1,5 @@
 import numpy as np
 from os import path
-import logging
 
 import pickle
 
@@ -10,7 +9,7 @@ from tqdm import tqdm
 from sklearn.preprocessing import normalize
 
 DATASET_NAME = "stanfordnlp/sst2"
-EMBEDDINGS_URL = "wiki_giga_2024_100_MFT20_vectors_seed_2024_alpha_0.75_eta_0.05.050_combined.txt"
+EMBEDDINGS_URL = path.join('assets', 'embeddings', "wiki_giga_2024_100_MFT20_vectors_seed_2024_alpha_0.75_eta_0.05.050_combined.txt")
 EMBEDDING_SIZE = 100
 
 TrainVal = tuple[
@@ -151,13 +150,13 @@ def load_data(train_size: int, validation_size: int, seed: int) -> TrainVal:
     )
 
 if __name__ == '__main__':
-    train, validation = load_data(200, 10, 123)
+    train, validation = load_data(10000, 100, 123)
 
-    np.save(path.join('data', '1-t-200-s-123-x'), train[0])
-    np.save(path.join('data', '1-t-200-s-123-y'), train[1])    
-    np.save(path.join('data', '1-t-200-s-123-s'), train[2])
+    np.save(path.join('data', 't-10000-s-123-x'), train[0])
+    np.save(path.join('data', 't-10000-s-123-y'), train[1])    
+    np.save(path.join('data', 't-10000-s-123-s'), train[2])
 
-    np.save(path.join('data', '1-v-10-s-123-x'), validation[0])
-    np.save(path.join('data', '1-v-10-s-123-y'), validation[1])
-    np.save(path.join('data', '1-t-10-s-123-s'), validation[2])
+    np.save(path.join('data', 'v-100-s-123-x'), validation[0])
+    np.save(path.join('data', 'v-100-s-123-y'), validation[1])
+    np.save(path.join('data', 'v-100-s-123-s'), validation[2])
     

@@ -42,12 +42,12 @@ def train_lstm_classifier_batched(
         batch_size: int,
         epochs: int, 
         lr: float,
-        debug_gradients: bool = False,
-        epoch_callback = None
+        permute: bool = True,
+        epoch_callback = None,
+        gradient_callback = None,
     ) -> LSTMClassifier:
     
     N = len(Y)                  # sample size
-    T = len(X[0])               # sequence length
     E = len(X[0][0])            # embedding size
     B = batch_size              # batch size
     H = lstm.hidden_state_size  # hidden state size
@@ -59,10 +59,11 @@ def train_lstm_classifier_batched(
     for epoch in range(epochs):
         print(f'starting epoch {epoch + 1}/{epochs}')
 
-        perm = np.random.permutation(N)
-        X = X[perm]
-        Y = Y[perm]
-        S = S[perm]
+        if permute:
+            perm = np.random.permutation(N)
+            X = X[perm]
+            Y = Y[perm]
+            S = S[perm]
 
         loss = 0
         
@@ -73,15 +74,21 @@ def train_lstm_classifier_batched(
             batch_start = batch * batch_size
             batch_end   = (batch + 1) * batch_size
 
-            sequence_length = int(S[batch_start:batch_end].max())
+            x_batch = X[batch_start:batch_end]
+            y_batch = Y[batch_start:batch_end]
+            s_batch = S[batch_start:batch_end]
 
-            output, history = lstm.output(X[batch_start:batch_end], S[batch_start:batch_end], True)
+            # determine the maximum sequence length in this batch
+            sequence_length = int(s_batch.max())
 
-            loss += bce(output, Y[batch_start:batch_end][:, None]).mean()
+            output, history = lstm.output(x_batch, s_batch, True)
+
+            loss += bce(output, y_batch[:, None]).mean()
 
             assert history is not None
 
-            grad_out = output - Y[batch_start:batch_end][..., None]
+            # dL/do = output - y
+            grad_out = output - y_batch[..., None]
 
             prev_grad_c = np.zeros((batch_size, H))
 
@@ -94,44 +101,46 @@ def train_lstm_classifier_batched(
 
 
             batch_indices = np.arange(B)
-            time_indices = S[batch_start:batch_end] - 1
+            time_indices = s_batch - 1
+
+            # get h at last timestep for each sequence in batch
             h_T = history[IH][batch_indices, time_indices]
 
+            # dL/dWz = dL/do * h_T
             grad_Wz = grad_out[:, :, None] * add_bias_col(h_T)[:, None, :]
-            
-            debug = np.random.rand(1) > 0.95
 
-
-            mask = np.arange(sequence_length)[None, :] < S[batch_start:batch_end, None]
-
-            # print('\n mask shape', mask.shape)
+            # create mask for valid timesteps
+            mask = np.arange(sequence_length)[None, :] < s_batch[:, None]
 
             for t in reversed(range(sequence_length)):
+                # mask for current timestep
                 valid = mask[:, t][:, None]
-
-                # print(valid.shape)
 
                 prev_c = np.zeros((B, H)) if t == 0 else history[IC,:,t-1]
                 prev_h = np.zeros((B, H)) if t == 0 else history[IH,:,t-1]
 
                 grad_h = prev_grad_h
-
+                
+                # gradients after activations
                 grad_c = prev_grad_c + grad_h * history[IO,:,t] * (1 - np.tanh(history[IC,:,t]) ** 2)
                 grad_f = grad_c * prev_c
                 grad_o = grad_h * np.tanh(history[IC][:,t])
                 grad_i = grad_c * history[ID,:,t]
                 grad_candidate = grad_c * history[II,:,t]
 
+                # gradients before activations
                 grad_a_f = grad_f * history[IF,:,t] * (1 - history[IF,:,t])
                 grad_a_i = grad_i * history[II,:,t] * (1 - history[II,:,t])
                 grad_a_o = grad_o * history[IO,:,t] * (1 - history[IO,:,t])
                 grad_a_c = grad_candidate * (1 - history[ID,:,t] ** 2)
 
+                # combined gradient for h
                 u = (grad_a_f @ lstm.W_f + 
                      grad_a_i @ lstm.W_i + 
                      grad_a_o @ lstm.W_o + 
                      grad_a_c @ lstm.W_c)
 
+                # update prev gradients
                 prev_grad_c = grad_c * history[IF,:,t]
                 prev_grad_h = u[:,E:-1]
 
@@ -141,29 +150,21 @@ def train_lstm_classifier_batched(
                 grad_a_o *= valid 
                 grad_a_c *= valid
 
-                x_t = add_bias_col(np.concatenate((X[batch_start:batch_end, t], prev_h), axis=1))
+                # prepare input with bias (input + hidden state + bias)
+                x_t = add_bias_col(np.concatenate((x_batch[:,t], prev_h), axis=1))
 
-                grad_Wf += grad_a_f[:, :, None] * x_t[:, None, :]
-                grad_Wi += grad_a_i[:, :, None] * x_t[:, None, :]
-                grad_Wo += grad_a_o[:, :, None] * x_t[:, None, :]
-                grad_Wc += grad_a_c[:, :, None] * x_t[:, None, :]
+                grad_Wf += grad_a_f[:,:,None] * x_t[:,None,:]
+                grad_Wi += grad_a_i[:,:,None] * x_t[:,None,:]
+                grad_Wo += grad_a_o[:,:,None] * x_t[:,None,:]
+                grad_Wc += grad_a_c[:,:,None] * x_t[:,None,:]
 
                 # ignore all gradients that are not within sequence length
                 prev_grad_c *= valid
                 prev_grad_h *= valid
 
-                if debug_gradients and debug:
-                    grad_norm_t = np.mean(np.abs(grad_h))
-                    print(f"t={t}, mean |grad_h|={grad_norm_t:.2e}")
-
-            if debug_gradients and debug:
-                print()
-                print(
-                    'f (', abs(grad_Wf).max(), ',', abs(grad_Wf).min(), ',', abs(grad_Wf).mean(), ')\n', 
-                    'i (', abs(grad_Wi).max(), ',', abs(grad_Wi).min(), ',', abs(grad_Wi).mean(), ')\n', 
-                    'o (', abs(grad_Wo).max(), ',', abs(grad_Wo).min(), ',', abs(grad_Wo).mean(), ')\n', 
-                    'c (', abs(grad_Wf).max(), ',', abs(grad_Wf).min(), ',', abs(grad_Wf).mean(), ')\n', 
-                    'z (', abs(grad_Wf).max(), ',', abs(grad_Wf).min(), ',', abs(grad_Wf).mean(), ')\n')
+                if gradient_callback is not None:
+                    if valid[batch, 0]:
+                        gradient_callback(grad_h[0], grad_c[0], epoch, batch, t)
                 
             clip_value = 5.0 
 
@@ -173,9 +174,10 @@ def train_lstm_classifier_batched(
             optimizer.update(lstm.W_c, np.clip(grad_Wc.mean(axis=0), -clip_value, clip_value), 'Wc')
             optimizer.update(lstm.W_z, np.clip(grad_Wz.mean(axis=0), -clip_value, clip_value), 'Wz')
 
-        print(f'\nloss:', loss / num_batches)
+        loss /= num_batches
+        print(f'\nloss:', loss)
 
         if epoch_callback is not None:
-            epoch_callback(lstm, epoch)
+            epoch_callback(lstm, epoch, loss)
 
     return lstm

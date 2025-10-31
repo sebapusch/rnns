@@ -1,60 +1,112 @@
-from rnn.rnn import RNN
-from rnn.train import train_rnn
-from lstm.lstm import LSTMClassifier
-from lstm.train import train_lstm_classifier
+from os import path
+import os
+from typing import Callable
 
 import numpy as np
 
 
-HIDDEN_STATE_SIZE = 10
-LR = 5e-1
-EPOCHS = 10
+from lstm.lstm import LSTMClassifier
+from lstm.train import compute_lstm_loss, train_lstm_classifier_batched
 
 
-def test_lstm(X: np.ndarray, Y: np.ndarray) -> None:
-    lstm = LSTMClassifier(3, HIDDEN_STATE_SIZE, 1)
+HIDDEN_STATE_SIZE = 32
+LR = 0.0005
+EPOCHS = 100
 
-    train_lstm_classifier(lstm, X, Y, EPOCHS, LR)
+EMBEDDING_SIZE = 100
 
-    h = None
-    o = None
-    c = None
-    for t in range(3):
-        o, c, h = lstm.step(X[0][t], c, h)
-    print(o)
+# (not using: too expensive)
+def k_fold(k: int, x: np.ndarray, y: np.ndarray, train: Callable, validate: Callable) -> None:
+    size = len(y)
+    
+    if size % k: raise ValueError('too lazy to handle this')
+
+    fold_size = size // k
+
+    if k == 1:
+        train(x, y)
+        return
+    
+    for i in range(k):
+        rng = (i * fold_size, (i + 1) * fold_size)
+
+        print(f'fold {i + 1}/{k} training')
+        train(x[rng[0]:rng[1]], y[rng[0]:rng[1]])
+        print(f'fold {i + 1}/{k} validation')
+        validate(
+            np.concatenate((x[:rng[0]], x[rng[1]:])),
+            np.concatenate((y[:rng[0]], y[rng[1]:])),
+        )
+
+def train(
+        run_id: str, 
+        epochs: int, 
+        lr: float, 
+        hidden_size: int,
+    ) -> None:
+    """
+    Train LSTM classifier on dataset.
+    
+    Args:
+        run_id (str): unique identifier for the training run
+        epochs (int): number of training epochs
+        lr (float): learning rate
+        hidden_size (int): size of the LSTM hidden state
+    """
+    train_x = np.load(path.join('data', 't-10000-s-123-x.npy'))
+    train_y = np.load(path.join('data', 't-10000-s-123-y.npy'))
+    train_s = np.load(path.join('data', 't-10000-s-123-s.npy'))
+
+    valid_x = np.load(path.join('data', 'v-100-s-123-x.npy'))
+    valid_y = np.load(path.join('data', 'v-100-s-123-y.npy'))    
+    valid_s = np.load(path.join('data', 'v-100-s-123-s.npy'))
+
+    def save_results(lstm: LSTMClassifier, epoch: int, train_loss: float) -> None:
+        val_loss = compute_lstm_loss(lstm, valid_x, valid_y, valid_s)
+        print(f'Epoch {epoch}: train loss {train_loss}, val loss {val_loss}')
+
+        with open(path.join('assets', 'runs', f'{run_id}'), 'a') as f:
+            f.write(f'{epoch} {train_loss} {val_loss}\n')
+
+        save_path = path.join('assets', 'weights', f'lstm-{run_id}-epoch-{epoch}')
+        os.makedirs(save_path, exist_ok=True)
+
+        lstm.save(save_path)
+
+    lstm = LSTMClassifier(EMBEDDING_SIZE, hidden_size, 1)
+
+    train_lstm_classifier_batched(
+        lstm,
+        train_x,
+        train_y,
+        train_s,
+        100,
+        epochs,
+        lr,
+        epoch_callback=save_results
+    )
+
+def test_overfit() -> None:
+    """
+    Test LSTM classifier on small dataset to check it is able to overfit.
+    """
+
+    x = np.load(path.join('data', 'v-100-s-123-x.npy'))
+    y = np.load(path.join('data', 'v-100-s-123-y.npy'))    
+    s = np.load(path.join('data', 'v-100-s-123-s.npy'))
+
+    model = LSTMClassifier(EMBEDDING_SIZE, 32, 1)
+    train_lstm_classifier_batched(model, x, y, s, epochs=EPOCHS, lr=LR, batch_size=1)
 
 
 def main():
-    # rnn = RNN(3, 1, HIDDEN_STATE_SIZE)
-
-    sample_x = np.array([
-        [
-            [1, 2, 3],
-            [1, 2, 3],
-            [1, 2, 3], 
-        ],
-        [
-            [1, 2, 3],
-            [1, 2, 3],
-            [1, 2, 3],
-        ]
-    ])
-
-    sample_y = np.array([
-        1,
-        1,
-    ])
-
-    test_lstm(sample_x, sample_y)
-
-    # train_rnn(rnn, sample_x, sample_y, EPOCHS, LR)
-
-    # h = None
-    # o = None
-    # for t in range(3):
-    #     o, h = rnn.step(sample_x[0][t], h)
-    # print(o)
-    
+    # test_overfit()
+    train(
+        run_id='lstm-run-1',
+        epochs=60,
+        lr=LR,
+        hidden_size=HIDDEN_STATE_SIZE,
+    )
 
 if __name__ == "__main__":
     main()
