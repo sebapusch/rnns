@@ -12,7 +12,7 @@ from rnn.train import compute_rnn_loss, train_rnn_classifier, compute_rnn_balanc
 
 
 HIDDEN_STATE_SIZE = 64
-LR = 0.01
+LR = 0.005
 EPOCHS = 20
 BATCH_SIZE = 80
 
