@@ -133,5 +133,28 @@ def plot_gradients() -> None:
     plot_gradient_decay(gradients_rnn, gradients_lstm_h, gradients_lstm_c, s)
 
 
+def plot_run(run_id: str) -> None:
+    epochs = []
+    train_losses = []
+    val_losses = []
+
+    with open(path.join('assets', 'runs', f'{run_id}'), 'r') as f:
+        for line in f:
+            epoch, train_loss, val_loss = line.strip().split()
+            epochs.append(int(epoch))
+            train_losses.append(float(train_loss))
+            val_losses.append(float(val_loss))
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(epochs, train_losses, label='Train Loss')
+    plt.plot(epochs, val_losses, label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title(f'Train vs Validation Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
 if __name__ == "__main__":
-    plot_gradients()
+    # plot_gradients()
+    plot_run('lstm-run-3')

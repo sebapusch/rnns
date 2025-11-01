@@ -9,9 +9,10 @@ from lstm.lstm import LSTMClassifier
 from lstm.train import compute_lstm_loss, train_lstm_classifier_batched
 
 
-HIDDEN_STATE_SIZE = 32
-LR = 0.0005
+HIDDEN_STATE_SIZE = 128
+LR = 0.00005
 EPOCHS = 100
+BATCH_SIZE = 25
 
 EMBEDDING_SIZE = 100
 
@@ -53,13 +54,13 @@ def train(
         lr (float): learning rate
         hidden_size (int): size of the LSTM hidden state
     """
-    train_x = np.load(path.join('data', 't-10000-s-123-x.npy'))
-    train_y = np.load(path.join('data', 't-10000-s-123-y.npy'))
-    train_s = np.load(path.join('data', 't-10000-s-123-s.npy'))
+    train_x = np.load(path.join('data', 't-50k-x.npy'))
+    train_y = np.load(path.join('data', 't-50k-y.npy'))
+    train_s = np.load(path.join('data', 't-50k-s.npy'))
 
-    valid_x = np.load(path.join('data', 'v-100-s-123-x.npy'))
-    valid_y = np.load(path.join('data', 'v-100-s-123-y.npy'))    
-    valid_s = np.load(path.join('data', 'v-100-s-123-s.npy'))
+    valid_x = np.load(path.join('data', 'v-100-x.npy'))
+    valid_y = np.load(path.join('data', 'v-100-y.npy'))    
+    valid_s = np.load(path.join('data', 'v-100-s.npy'))
 
     def save_results(lstm: LSTMClassifier, epoch: int, train_loss: float) -> None:
         val_loss = compute_lstm_loss(lstm, valid_x, valid_y, valid_s)
@@ -76,13 +77,10 @@ def train(
     lstm = LSTMClassifier(EMBEDDING_SIZE, hidden_size, 1)
 
     train_lstm_classifier_batched(
-        lstm,
-        train_x,
-        train_y,
-        train_s,
-        100,
-        epochs,
-        lr,
+        lstm, train_x, train_y, train_s,
+        batch_size=BATCH_SIZE,
+        epochs=epochs,
+        lr=lr,
         epoch_callback=save_results
     )
 
@@ -95,14 +93,14 @@ def test_overfit() -> None:
     y = np.load(path.join('data', 'v-100-s-123-y.npy'))    
     s = np.load(path.join('data', 'v-100-s-123-s.npy'))
 
-    model = LSTMClassifier(EMBEDDING_SIZE, 32, 1)
+    model = LSTMClassifier(EMBEDDING_SIZE, HIDDEN_STATE_SIZE, 1)
     train_lstm_classifier_batched(model, x, y, s, epochs=EPOCHS, lr=LR, batch_size=1)
 
 
 def main():
     # test_overfit()
     train(
-        run_id='lstm-run-1',
+        run_id='lstm-run-3',
         epochs=60,
         lr=LR,
         hidden_size=HIDDEN_STATE_SIZE,

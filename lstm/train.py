@@ -5,6 +5,9 @@ from tqdm import tqdm
 
 from helpers import bce, add_bias_col, Adam
 
+def bce_with_logits(logits: np.ndarray, y: np.ndarray) -> np.ndarray:
+    return np.maximum(logits, 0) - logits * y + np.log1p(np.exp(-np.abs(logits)))
+
 
 def compute_lstm_loss(
         lstm: LSTMClassifier, 
@@ -12,7 +15,7 @@ def compute_lstm_loss(
         Y: np.ndarray,
         S: np.ndarray,
 ) -> float:
-    out, _ = lstm.output(X, S)
+    out, _ = lstm.probability(X, S)
 
     return bce(out, Y[:,None]).mean()
 
@@ -24,7 +27,7 @@ def compute_lstm_accuracy(
         S: np.ndarray,
         threshold: float = 0.5,
 ) -> float:
-    out, _ = lstm.output(X, S)
+    out, _ = lstm.probability(X, S)
 
     correct = 0
     for s in range(len(Y)):
@@ -81,14 +84,13 @@ def train_lstm_classifier_batched(
             # determine the maximum sequence length in this batch
             sequence_length = int(s_batch.max())
 
-            output, history = lstm.output(x_batch, s_batch, True)
+            logits, history = lstm.logit(x_batch, s_batch, True)
 
-            loss += bce(output, y_batch[:, None]).mean()
+            loss += bce_with_logits(logits, y_batch[:, None]).mean()
 
             assert history is not None
 
-            # dL/do = output - y
-            grad_out = output - y_batch[..., None]
+            grad_out = (1 / (1 + np.exp(-logits))) - y_batch[:, None]
 
             prev_grad_c = np.zeros((batch_size, H))
 

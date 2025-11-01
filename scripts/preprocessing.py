@@ -54,7 +54,7 @@ class Embedder:
 
     @staticmethod
     def load() -> 'Embedder':
-        with open('embedder.pickle', 'rb') as f:
+        with open(path.join('assets', 'embeddings', 'embedder.pickle'), 'rb') as f:
             embeddings = pickle.load(f)
             return Embedder(embeddings)
 
@@ -150,13 +150,13 @@ def load_data(train_size: int, validation_size: int, seed: int) -> TrainVal:
     )
 
 if __name__ == '__main__':
-    train, validation = load_data(10000, 100, 123)
+    train, validation = load_data(50000, 100, 123)
 
-    np.save(path.join('data', 't-10000-s-123-x'), train[0])
-    np.save(path.join('data', 't-10000-s-123-y'), train[1])    
-    np.save(path.join('data', 't-10000-s-123-s'), train[2])
+    np.save(path.join('data', 't-50k-x'), train[0])
+    np.save(path.join('data', 't-50k-y'), train[1])    
+    np.save(path.join('data', 't-50k-s'), train[2])
 
-    np.save(path.join('data', 'v-100-s-123-x'), validation[0])
-    np.save(path.join('data', 'v-100-s-123-y'), validation[1])
-    np.save(path.join('data', 'v-100-s-123-s'), validation[2])
+    np.save(path.join('data', 'v-100-x'), validation[0])
+    np.save(path.join('data', 'v-100-y'), validation[1])
+    np.save(path.join('data', 'v-100-s'), validation[2])
     

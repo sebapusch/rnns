@@ -160,17 +160,15 @@ class LSTMClassifier(LSTMCell):
 
         return [o, c_next, h_next]
     
-    
-    def output(self, x: np.ndarray, s: np.ndarray, store_history: bool = False) -> tuple[np.ndarray, np.ndarray | None]:
+    def logit(self, x: np.ndarray, s: np.ndarray, store_history: bool = False) -> tuple[np.ndarray, np.ndarray | None]:
         """
-        Compute the output of the LSTM classifier for a sequence of inputs.
+        Compute the logit output of the LSTM classifier for a sequence of inputs.
 
         Args:
             x (np.ndarray): input sequence (2D or 3D for batched)
             s (np.ndarray): sequence lengths for each batch
-            store_history (bool): whether to store the activation history
         Returns:
-            tuple[np.ndarray, np.ndarray | None]: output and activation history (if stored)
+            np.ndarray: logit output
         """
         if x.ndim == 1:
             x = np.expand_dims(x, axis=0)
@@ -208,7 +206,26 @@ class LSTMClassifier(LSTMCell):
         # masking to take output at last timestep
         outputs = np.array([outputs[i, s[i] - 1, :] for i in range(batch_size)])
 
-        return sigmoid(outputs), history
+        return outputs, history
+    
+    
+    
+    def probability(self, x: np.ndarray, s: np.ndarray, store_history: bool = False) -> tuple[np.ndarray, np.ndarray | None]:
+        """
+        Compute the output of the LSTM classifier for a sequence of inputs.
+
+        Args:
+            x (np.ndarray): input sequence (2D or 3D for batched)
+            s (np.ndarray): sequence lengths for each batch
+            store_history (bool): whether to store the activation history
+        Returns:
+            tuple[np.ndarray, np.ndarray | None]: output and activation history (if stored)
+        """
+        logits, history = self.logit(x, s, store_history)
+        probs = sigmoid(logits)
+
+        return probs, history
+
     
     def save(self, location: str) -> None:
         """
