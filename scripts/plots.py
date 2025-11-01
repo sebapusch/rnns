@@ -8,14 +8,12 @@ from lstm.train import train_lstm_classifier_batched
 from rnn.rnn import RNN
 from rnn.train import train_rnn
 
+plt.rcParams.update({'font.size': 14})
 
 def plot_gradient_decay(
-    grad_rnn: np.ndarray,
-    grad_lstm_h: np.ndarray,
-    grad_lstm_c: np.ndarray,
+    grads: list[tuple[str, str, np.ndarray]],
     S: np.ndarray,
     threshold: float = 1e-12,
-    max_depth: int = 200,
 ) -> None:
     """
     Plot gradient magnitude decay vs number of backpropagated steps.
@@ -32,6 +30,8 @@ def plot_gradient_decay(
         max_depth:  maximum number of backprop steps to display
         bin_size:   bin width for smoother collapsed-ratio plot
     """
+
+    max_depth = S.max() - 1
 
     def compute_stats(grad: np.ndarray, S: np.ndarray):
         E, N, T, H = grad.shape
@@ -66,34 +66,56 @@ def plot_gradient_decay(
                 q75[d] = np.percentile(vals, 75)
         return median, q25, q75
 
-    med_rnn, q25_rnn, q75_rnn = compute_stats(grad_rnn, S)
-    med_h, q25_h, q75_h = compute_stats(grad_lstm_h, S)
-    med_c, q25_c, q75_c = compute_stats(grad_lstm_c, S)
-
     depths = np.arange(1, max_depth + 1)
 
     # plot gradient magnitudes
+
     plt.figure(figsize=(12, 6))
-    plt.plot(depths, med_rnn, label="RNN ∇h", color="tab:blue")
-    plt.fill_between(depths, q25_rnn, q75_rnn, color="tab:blue", alpha=0.3)
+    for label, color, grad in grads:
+        med, q25, q75 = compute_stats(grad, S)
 
-    plt.plot(depths, med_h, label="LSTM ∇h", color="tab:orange")
-    plt.fill_between(depths, q25_h, q75_h, color="tab:orange", alpha=0.3)
-
-    plt.plot(depths, med_c, label="LSTM ∇c", color="tab:green")
-    plt.fill_between(depths, q25_c, q75_c, color="tab:green", alpha=0.3)
+        plt.plot(depths, med, label=f"{label} ∇h", color=color)
+        plt.fill_between(depths, q25, q75, color=color, alpha=0.3)
 
     plt.yscale("log")
     plt.xlabel("Number of backpropagated steps (depth)")
     plt.ylabel("L2 Gradient Norm (log scale)")
-    plt.title("Gradient decay vs. backpropagation depth")
+    plt.title(f"Gradient decay vs. backpropagation depth")
     plt.grid(True, axis="y", linestyle="--", alpha=0.6)
     plt.legend()
     plt.tight_layout()
     plt.show()
 
 
-def plot_gradients() -> None:
+def plot_gradients_rnns() -> None:
+    epochs = 10
+    lr = 0.0002
+
+    N = 2000
+    H = [16, 32, 64]
+
+    grads = []
+
+    x = np.load(path.join('data', 't-10000-s-123-x.npy'))[3000:3000 + N]
+    y = np.load(path.join('data', 't-10000-s-123-y.npy'))[3000:3000 + N]
+    s = np.load(path.join('data', 't-10000-s-123-s.npy'))[3000:3000 + N]
+
+    for i, h in enumerate(H):
+        gradients_rnn = np.zeros((epochs, N, s.max(), h))
+
+        rnn = RNN(x.shape[2], 1, h)
+
+        def accumulate_rnn(grad_h: np.ndarray, e: int, s: int, t: int) -> None:
+            gradients_rnn[e, s, t] = grad_h
+        
+        train_rnn(rnn, x, y, s, epochs, lr, accumulate_rnn)
+
+        grads.append((f"RNN H={h}", f'C{i}', gradients_rnn))
+
+    plot_gradient_decay(grads, s)
+
+
+def plot_gradients_rnn_vs_lstm() -> None:
     epochs = 10
     lr = 0.0005
 
@@ -130,7 +152,11 @@ def plot_gradients() -> None:
     
     train_rnn(rnn, x, y, s, epochs, lr, accumulate_rnn)
 
-    plot_gradient_decay(gradients_rnn, gradients_lstm_h, gradients_lstm_c, s)
+    plot_gradient_decay([
+        ("RNN ∇h", 'C0', gradients_rnn),
+        ("LSTM ∇h", 'C1', gradients_lstm_h),
+        ("LSTM ∇c", 'C2', gradients_lstm_c),
+    ], s)
 
 
 def plot_run(run_id: str) -> None:
@@ -156,5 +182,6 @@ def plot_run(run_id: str) -> None:
     plt.show()
 
 if __name__ == "__main__":
-    # plot_gradients()
-    plot_run('lstm-run-3')
+    plot_gradients_rnn_vs_lstm()
+    # plot_run('lstm-run-3')
+    #plot_gradients_rnns()

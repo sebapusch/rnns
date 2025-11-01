@@ -36,6 +36,39 @@ def compute_lstm_accuracy(
 
     return correct / len(Y)
 
+def compute_lstm_balanced_accuracy(
+        lstm: LSTMClassifier,
+        X: np.ndarray,
+        Y: np.ndarray,
+        S: np.ndarray,
+        threshold: float = 0.5,
+) -> float:
+    out, _ = lstm.probability(X, S)
+
+    true_positives = 0
+    true_negatives = 0
+    false_positives = 0
+    false_negatives = 0
+
+    for s in range(len(Y)):
+        prediction = int(out[s] > threshold)
+        actual = Y[s]
+
+        if prediction == 1 and actual == 1:
+            true_positives += 1
+        elif prediction == 0 and actual == 0:
+            true_negatives += 1
+        elif prediction == 1 and actual == 0:
+            false_positives += 1
+        elif prediction == 0 and actual == 1:
+            false_negatives += 1
+
+    sensitivity = true_positives / (true_positives + false_negatives + 1e-8)
+    specificity = true_negatives / (true_negatives + false_positives + 1e-8)
+
+    balanced_accuracy = (sensitivity + specificity) / 2
+
+    return balanced_accuracy
 
 def train_lstm_classifier_batched(
         lstm: LSTMClassifier, 
@@ -165,7 +198,7 @@ def train_lstm_classifier_batched(
                 prev_grad_h *= valid
 
                 if gradient_callback is not None:
-                    if valid[batch, 0]:
+                    if valid[0, 0]:
                         gradient_callback(grad_h[0], grad_c[0], epoch, batch, t)
                 
             clip_value = 5.0 

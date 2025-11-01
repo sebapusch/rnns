@@ -4,12 +4,11 @@ from typing import Callable
 
 import numpy as np
 
-
 from lstm.lstm import LSTMClassifier
-from lstm.train import compute_lstm_loss, train_lstm_classifier_batched
+from lstm.train import compute_lstm_loss, train_lstm_classifier_batched, compute_lstm_balanced_accuracy
 
 
-HIDDEN_STATE_SIZE = 128
+HIDDEN_STATE_SIZE = 64
 LR = 0.00005
 EPOCHS = 100
 BATCH_SIZE = 25
@@ -54,13 +53,13 @@ def train(
         lr (float): learning rate
         hidden_size (int): size of the LSTM hidden state
     """
-    train_x = np.load(path.join('data', 't-50k-x.npy'))
-    train_y = np.load(path.join('data', 't-50k-y.npy'))
-    train_s = np.load(path.join('data', 't-50k-s.npy'))
+    train_x = np.load(path.join('data', 'train-x.npy'))
+    train_y = np.load(path.join('data', 'train-y.npy'))
+    train_s = np.load(path.join('data', 'train-s.npy'))
 
-    valid_x = np.load(path.join('data', 'v-100-x.npy'))
-    valid_y = np.load(path.join('data', 'v-100-y.npy'))    
-    valid_s = np.load(path.join('data', 'v-100-s.npy'))
+    valid_x = np.load(path.join('data', 'validation-x.npy'))
+    valid_y = np.load(path.join('data', 'validation-y.npy'))    
+    valid_s = np.load(path.join('data', 'validation-s.npy'))
 
     def save_results(lstm: LSTMClassifier, epoch: int, train_loss: float) -> None:
         val_loss = compute_lstm_loss(lstm, valid_x, valid_y, valid_s)
@@ -89,13 +88,28 @@ def test_overfit() -> None:
     Test LSTM classifier on small dataset to check it is able to overfit.
     """
 
-    x = np.load(path.join('data', 'v-100-s-123-x.npy'))
-    y = np.load(path.join('data', 'v-100-s-123-y.npy'))    
-    s = np.load(path.join('data', 'v-100-s-123-s.npy'))
+    x = np.load(path.join('data', 'validation-x.npy'))
+    y = np.load(path.join('data', 'validation-y.npy'))    
+    s = np.load(path.join('data', 'validation-s.npy'))
 
     model = LSTMClassifier(EMBEDDING_SIZE, HIDDEN_STATE_SIZE, 1)
     train_lstm_classifier_batched(model, x, y, s, epochs=EPOCHS, lr=LR, batch_size=1)
 
+def test() -> None:
+    """
+    Test LSTM classifier on test dataset and print balanced accuracy.
+    """
+
+    valid_x = np.load(path.join('data', 'test-x.npy'))
+    valid_y = np.load(path.join('data', 'test-y.npy'))    
+    valid_s = np.load(path.join('data', 'test-s.npy'))
+
+    lstm = LSTMClassifier(EMBEDDING_SIZE, HIDDEN_STATE_SIZE, 1)
+    lstm.load(path.join('assets', 'weights', 'lstm-lstm-run-3-epoch-60'))
+
+    accuracy = compute_lstm_balanced_accuracy(lstm, valid_x, valid_y, valid_s)
+
+    print(f'Balanced accuracy on test set: {accuracy}')
 
 def main():
     # test_overfit()
@@ -105,6 +119,9 @@ def main():
         lr=LR,
         hidden_size=HIDDEN_STATE_SIZE,
     )
+    test()
+
+
 
 if __name__ == "__main__":
     main()

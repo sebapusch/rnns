@@ -12,10 +12,7 @@ DATASET_NAME = "stanfordnlp/sst2"
 EMBEDDINGS_URL = path.join('assets', 'embeddings', "wiki_giga_2024_100_MFT20_vectors_seed_2024_alpha_0.75_eta_0.05.050_combined.txt")
 EMBEDDING_SIZE = 100
 
-TrainVal = tuple[
-    tuple[np.ndarray, np.ndarray, np.ndarray],
-    tuple[np.ndarray, np.ndarray, np.ndarray],
-]
+TrainVal = tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
 def load_glove_embeddings():
@@ -119,44 +116,44 @@ def pad(sequence: list, max_size: int) -> tuple[np.ndarray, np.ndarray]:
 
     return np.stack(sequence), sequence_length
 
-def load_data(train_size: int, validation_size: int, seed: int) -> TrainVal:
+def load_data(size: int, seed: int) -> TrainVal:
     np.random.seed(seed)
 
     print('loading embeddings...')
     embedder = Embedder.generate_or_load()
     print('embeddings loaded...')
 
-    dataset = datasets.load_dataset(DATASET_NAME)
+    dataset = datasets.load_dataset(DATASET_NAME)['train']
 
-    train = dataset['train']
-    valid = dataset['validation']
-    assert isinstance(train, datasets.Dataset)
-    assert isinstance(valid, datasets.Dataset)
+    assert type(dataset) == datasets.Dataset
 
-    train_dataset       = balanced_sample(train, train_size, seed)
-    validation_dataset  = balanced_sample(valid, validation_size, seed)
+    data = balanced_sample(dataset, size, seed)
 
-    train_x, train_y, max_size_train = preprocess(embedder, train_dataset)
-    valid_x, valid_y, max_size_valid = preprocess(embedder, validation_dataset)
+    X, Y, max_size = preprocess(embedder, data)
+    X, S = pad(X, max_size)
 
-    max_size = max(max_size_train, max_size_valid)
-
-    train_x, train_s = pad(train_x, max_size)
-    valid_x, valid_s = pad(valid_x, max_size)
-
-    return (
-        (train_x, train_y, train_s),
-        (valid_x, valid_y, valid_s),
-    )
+    return (X, Y, S)
 
 if __name__ == '__main__':
-    train, validation = load_data(50000, 100, 123)
+    X, Y, S = load_data(50000, 11)
 
-    np.save(path.join('data', 't-50k-x'), train[0])
-    np.save(path.join('data', 't-50k-y'), train[1])    
-    np.save(path.join('data', 't-50k-s'), train[2])
-
-    np.save(path.join('data', 'v-100-x'), validation[0])
-    np.save(path.join('data', 'v-100-y'), validation[1])
-    np.save(path.join('data', 'v-100-s'), validation[2])
+    permutation = np.random.permutation(len(X))
+    X = X[permutation]
+    Y = Y[permutation]
+    S = S[permutation]
     
+    train = (X[:40000], Y[:40000], S[:40000])
+    validation = (X[40000:45000], Y[40000:45000], S[40000:45000])
+    test = (X[45000:], Y[45000:], S[45000:])
+
+    np.save(path.join('data', 'test-x'), test[0])
+    np.save(path.join('data', 'test-y'), test[1])
+    np.save(path.join('data', 'test-s'), test[2])
+
+    np.save(path.join('data', 'validation-x'), validation[0])
+    np.save(path.join('data', 'validation-y'), validation[1])
+    np.save(path.join('data', 'validation-s'), validation[2])
+
+    np.save(path.join('data', 'train-x'), train[0])
+    np.save(path.join('data', 'train-y'), train[1])
+    np.save(path.join('data', 'train-s'), train[2])
