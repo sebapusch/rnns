@@ -1,5 +1,7 @@
 import numpy as np
 from os import path
+import re
+import string
 
 import pickle
 
@@ -25,19 +27,67 @@ def load_glove_embeddings():
             embeddings[word] = np.array(parts[-EMBEDDING_SIZE:], dtype=np.float32)
     return embeddings
 
-
 class Embedder:
-    def __init__(self, embeddings: dict) -> None:
+    def __init__(self, embeddings: dict, rules_path: str | None = None) -> None:
         self.embeddings = embeddings
+        self.rules = self._load_rules(rules_path) if rules_path else {}
+
+        # track missing tokens for later inspection
+        self.missing: list[str] = []
+
+    def _load_rules(self, rules_path: str) -> dict[str, list[str]]:
+        """
+        Load token correction/splitting rules from a text file.
+        Format:
+            original_token corrected_token1 [corrected_token2 ...]
+        """
+        rules = {}
+        if not path.exists(rules_path):
+            print(f"[WARN] No token rules file found at: {rules_path}")
+            return rules
+
+        with open(rules_path, "r", encoding="utf8") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    key = parts[0]
+                    values = parts[1:]
+                    rules[key] = values
+        print(f"[INFO] Loaded {len(rules)} token rules from {rules_path}")
+        return rules
+
+    def tokenize(self, sentence: str) -> list[str]:
+        sentence = sentence.lower()
+        sentence = sentence.replace('-', ' ')
+        # remove punctuation (keep apostrophes if desired)
+        sentence = re.sub(f"[{re.escape(string.punctuation)}]", "", sentence)
+        return sentence.split()
 
     def __call__(self, sentence: str) -> np.ndarray:
+        tokens = self.tokenize(sentence)
         sequence_embeddings = []
-        for word in sentence:
-            if word not in self.embeddings:
-                continue                        # @todo handle
-            sequence_embeddings.append(self.embeddings[word])
-        
+
+        for token in tokens:
+            # Apply manual correction/splitting rules if available
+            if token in self.rules:
+                rule_tokens = self.rules[token]
+            else:
+                rule_tokens = [token]
+
+            # For each resulting token, look up or assign <unk>
+            for t in rule_tokens:
+                if t in self.embeddings:
+                    sequence_embeddings.append(self.embeddings[t])
+                else:
+                    self.missing.append(t)
+                    sequence_embeddings.append(np.zeros(EMBEDDING_SIZE, dtype=np.float32))
+
+        # fallback if empty (e.g., all unknown tokens)
+        if not sequence_embeddings:
+            sequence_embeddings = [np.zeros(EMBEDDING_SIZE, dtype=np.float32)]
+
         return np.stack(sequence_embeddings)
+
     
 
     @staticmethod
@@ -56,7 +106,7 @@ class Embedder:
             return Embedder(embeddings)
 
     def save(self) -> None:
-        with open('embedder.pickle', 'wb') as f:
+        with open(path.join('assets', 'embeddings', 'embedder.pickle'), 'wb') as f:
             pickle.dump(self.embeddings, f)
     
             
@@ -135,7 +185,7 @@ def load_data(size: int, seed: int) -> TrainVal:
     return (X, Y, S)
 
 if __name__ == '__main__':
-    X, Y, S = load_data(50000, 11)
+    X, Y, S = load_data(58000, 11)
 
     permutation = np.random.permutation(len(X))
     X = X[permutation]
