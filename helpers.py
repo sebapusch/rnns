@@ -16,7 +16,8 @@ def orthogonal(shape: tuple) -> np.ndarray:
 
 
 def sigmoid(x: np.ndarray) -> np.ndarray:
-    return 1 / (1 + np.exp(-x))
+    x = np.clip(x, -60, 60)  # limit to prevent overflow in exp
+    return 1.0 / (1.0 + np.exp(-x))
 
 def bce(z: np.ndarray, y: np.ndarray, eps: float = 1e-8) -> np.ndarray:
     z = np.clip(z, eps, 1 - eps)

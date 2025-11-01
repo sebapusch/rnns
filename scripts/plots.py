@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '..')
+
 from os import path
 
 import numpy as np
@@ -22,9 +25,8 @@ def plot_gradient_decay(
         depth = number of steps backpropagated from the end (1 = last step).
 
     Args:
-        grad_rnn:   (E, N, T, H) gradients of RNN hidden state
-        grad_lstm_h:(E, N, T, H) gradients of LSTM hidden state
-        grad_lstm_c:(E, N, T, H) gradients of LSTM cell state
+        grads:      list of (label, color, gradients) tuples
+                    gradients: (E, N, T, H) array of gradients
         S:          (N,) true sequence lengths
         threshold:  gradient norm below which it's considered collapsed
         max_depth:  maximum number of backprop steps to display

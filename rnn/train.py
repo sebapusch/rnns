@@ -6,10 +6,67 @@ from helpers import bce, Adam
 
 from tqdm import tqdm
 
-def train_rnn(rnn: RNN, X: np.ndarray, Y: np.ndarray, S: np.ndarray, epochs: int, lr: float, callback = None) -> RNN:
+def compute_rnn_loss(
+        rnn: RNN,
+        X: np.ndarray,
+        Y: np.ndarray,
+        S: np.ndarray,
+) -> float:
+    total_loss = 0.0
+
+    for s in range(len(Y)):
+        h = np.zeros(shape=(rnn.hidden_state_size,))
+        z = np.zeros(1)
+        for t in range(S[s]):
+            z, h = rnn.step(X[s][t], h)
+        
+        total_loss += bce(z, Y[s])
+
+    return float(total_loss / len(Y))
+
+def compute_rnn_balance_accuracy(
+        rnn: RNN,
+        X: np.ndarray,
+        Y: np.ndarray,
+        S: np.ndarray,
+        threshold: float = 0.5,
+) -> float:
+    true_positives = 0
+    true_negatives = 0
+    false_positives = 0
+    false_negatives = 0
+
+    for s in range(len(Y)):
+        h = np.zeros(shape=(rnn.hidden_state_size,))
+        z = np.zeros(1)
+        for t in range(S[s]):
+            z, h = rnn.step(X[s][t], h)
+        
+        prediction = int(z > threshold)
+        actual = Y[s]
+
+        if prediction == 1 and actual == 1:
+            true_positives += 1
+        elif prediction == 0 and actual == 0:
+            true_negatives += 1
+        elif prediction == 1 and actual == 0:
+            false_positives += 1
+        elif prediction == 0 and actual == 1:
+            false_negatives += 1
+
+    sensitivity = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
+    specificity = true_negatives / (true_negatives + false_positives) if (true_negatives + false_positives) > 0 else 0
+
+    balanced_accuracy = (sensitivity + specificity) / 2
+
+    return balanced_accuracy
+
+
+def train_rnn_classifier(rnn: RNN, X: np.ndarray, Y: np.ndarray, S: np.ndarray, epochs: int, lr: float, callback = None, epoch_callback = None) -> RNN:
     optimizer = Adam(lr)
     
-    for e in tqdm(range(epochs)):
+    for e in range(epochs):
+        print(f'Starting epoch {e}')
         total_loss = 0
 
         for s in tqdm(range(len(Y))):
@@ -21,7 +78,7 @@ def train_rnn(rnn: RNN, X: np.ndarray, Y: np.ndarray, S: np.ndarray, epochs: int
                 z, h = rnn.step(X[s][t], h)
                 hidden_states[t] = h
 
-            total_loss += -bce(z, Y[s])
+            total_loss += bce(z, Y[s])
 
             grad_o = z - Y[s]
 
@@ -60,5 +117,7 @@ def train_rnn(rnn: RNN, X: np.ndarray, Y: np.ndarray, S: np.ndarray, epochs: int
             # rnn.W_hx -= lr * grad_Whx
 
         print(f'loss at epoch {e}: {total_loss / len(Y)}')
+        if epoch_callback is not None:
+            epoch_callback(rnn, e, total_loss / len(Y))
 
     return rnn

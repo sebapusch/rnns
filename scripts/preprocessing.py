@@ -192,9 +192,9 @@ if __name__ == '__main__':
     Y = Y[permutation]
     S = S[permutation]
     
-    train = (X[:40000], Y[:40000], S[:40000])
-    validation = (X[40000:45000], Y[40000:45000], S[40000:45000])
-    test = (X[45000:], Y[45000:], S[45000:])
+    train = (X[:50000], Y[:50000], S[:50000])
+    validation = (X[50000:54000], Y[50000:54000], S[50000:54000])
+    test = (X[54000:], Y[54000:], S[54000:])
 
     np.save(path.join('data', 'test-x'), test[0])
     np.save(path.join('data', 'test-y'), test[1])

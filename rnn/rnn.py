@@ -32,5 +32,27 @@ class RNN:
         h_next = self.W_hh @ h.T + self.W_hx @ x.T
 
         return sigmoid(self.W_oh @ np.append(h_next, 1)), h_next
+    
+    def save(self, filepath: str) -> None:
+        np.savez(
+            filepath,
+            W_hx=self.W_hx,
+            W_hh=self.W_hh,
+            W_oh=self.W_oh,
+        )
+
+    @staticmethod
+    def load(filepath: str) -> 'RNN':
+        data = np.load(filepath)
+        rnn = RNN(
+            input_size=data['W_hx'].shape[1] - 1,
+            output_size=data['W_oh'].shape[0],
+            hidden_state_size=data['W_hh'].shape[0],
+        )
+        rnn.W_hx = data['W_hx']
+        rnn.W_hh = data['W_hh']
+        rnn.W_oh = data['W_oh']
+        return rnn
+
         
 

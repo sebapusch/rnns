@@ -103,9 +103,7 @@ def train_lstm_classifier_batched(
 
         loss = 0
         
-        print(f'batch progress ({num_batches}) ', end='', flush=True)
-        for batch in range(num_batches):
-            print('.', end='', flush=True)
+        for batch in tqdm(range(num_batches)):
 
             batch_start = batch * batch_size
             batch_end   = (batch + 1) * batch_size
