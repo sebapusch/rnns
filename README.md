@@ -41,7 +41,7 @@ Data Preprocessing
 
 Run the following script to generate train/validation/test splits in `.npy` format using SST-2 with GloVe embeddings:
 
-python scripts/preprocessing.py
+`python scripts/preprocessing.py`
 
 This will save the data to the `data/` folder.
 
@@ -92,5 +92,6 @@ Notes
 - Embeddings are static (non-trainable) and based on GloVe.
 - Only the final output of the RNN/LSTM is used for loss computation (sequence classification).
 - Manual weight initialization and batching were used to improve trainability.
+
 
 
