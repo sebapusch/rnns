@@ -33,8 +33,8 @@ You’ll need:
 
 pip install numpy datasets tqdm scikit-learn matplotlib
 
-Make sure GloVe-like embeddings (100D) are available in:
-assets/embeddings/wiki_giga_2024_100_MFT20_vectors_seed_2024_alpha_0.75_eta_0.05.050_combined.txt
+Make sure [GloVe-like embeddings](https://nlp.stanford.edu/projects/glove/) (100D) are available in:
+`assets/embeddings/wiki_giga_2024_100_MFT20_vectors_seed_2024_alpha_0.75_eta_0.05.050_combined.txt`
 
 Data Preprocessing
 ------------------
@@ -52,15 +52,15 @@ Edit `main.py` and uncomment the appropriate block depending on the model you wa
 
 To train an LSTM:
 
-train_lstm(run_id="lstm-run-3", epochs=20, lr=0.002, hidden_size=64)
+`train_lstm(run_id="lstm-run-3", epochs=20, lr=0.002, hidden_size=64)`
 
 To train a vanilla RNN:
 
-train_rnn(run_id="rnn-run-1", epochs=20, lr=0.002, hidden_size=64)
+`train_rnn(run_id="rnn-run-1", epochs=20, lr=0.002, hidden_size=64)`
 
 Then run:
 
-python main.py
+`python main.py`
 
 Model weights and training logs will be saved under `assets/`.
 
@@ -69,26 +69,22 @@ Evaluation and Plotting
 
 To test a saved LSTM model on the test set, update `main.py` and run:
 
-test()
+`test()`
 
 To visualize training loss:
 
-python scripts/plots.py
+`python scripts/plots.py`
 
 This will show training vs validation loss curves for a given run. You can also call:
 
-plot_gradients_rnn_vs_lstm()
-
-or
-
-plot_gradients_rnns()
+`plot_gradients_rnn_vs_lstm()`
 
 to generate gradient decay plots as seen in the report.
 
 Overfitting Check
 -----------------
 
-You can test whether your model can overfit a small subset by uncommenting `test_overfit()` in `main.py`.
+You can test whether the lstm model can overfit a small subset by uncommenting `test_overfit()` in `main.py`.
 
 Notes
 -----
@@ -97,8 +93,4 @@ Notes
 - Only the final output of the RNN/LSTM is used for loss computation (sequence classification).
 - Manual weight initialization and batching were used to improve trainability.
 
-License
--------
 
-
-This project is intended for academic use as part of a bachelor-level deep learning project.
