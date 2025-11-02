@@ -7,6 +7,7 @@ This repository explores the training behavior and gradient flow in vanilla RNNs
 Project Structure
 -----------------
 
+```
 .
 ├── main.py                # Entry point for training/testing  
 ├── scripts/  
@@ -20,6 +21,7 @@ Project Structure
 │   ├── runs/              # Saved training logs (one file per run)  
 │   ├── weights/           # Saved model weights  
 │   └── embeddings/        # Custom or GloVe embeddings  
+```
 
 Setup
 -----
@@ -97,5 +99,6 @@ Notes
 
 License
 -------
+
 
 This project is intended for academic use as part of a bachelor-level deep learning project.
