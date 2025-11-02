@@ -51,6 +51,7 @@ def compute_lstm_balanced_accuracy(
     false_negatives = 0
 
     for s in range(len(Y)):
+        print(f'Output: {out[s]}, Actual: {Y[s]}')
         prediction = int(out[s] > threshold)
         actual = Y[s]
 
@@ -69,6 +70,18 @@ def compute_lstm_balanced_accuracy(
     balanced_accuracy = (sensitivity + specificity) / 2
 
     return balanced_accuracy
+
+def compute_lstm_roc_auc(
+        lstm: LSTMClassifier,
+        X: np.ndarray,
+        Y: np.ndarray,
+        S: np.ndarray,
+) -> float:
+    from sklearn.metrics import roc_auc_score
+
+    out, _ = lstm.probability(X, S)
+
+    return float(roc_auc_score(Y, out))
 
 def train_lstm_classifier_batched(
         lstm: LSTMClassifier, 

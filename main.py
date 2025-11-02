@@ -5,16 +5,16 @@ from typing import Callable
 import numpy as np
 
 from lstm.lstm import LSTMClassifier
-from lstm.train import compute_lstm_loss, train_lstm_classifier_batched, compute_lstm_balanced_accuracy
+from lstm.train import compute_lstm_loss, train_lstm_classifier_batched, compute_lstm_balanced_accuracy, compute_lstm_roc_auc
 
 from rnn.rnn import RNN
 from rnn.train import compute_rnn_loss, train_rnn_classifier, compute_rnn_balance_accuracy
 
 
 HIDDEN_STATE_SIZE = 64
-LR = 0.005
+LR = 0.002
 EPOCHS = 20
-BATCH_SIZE = 80
+BATCH_SIZE = 64
 
 EMBEDDING_SIZE = 100
 
@@ -115,12 +115,13 @@ def train_lstm(
         with open(path.join('assets', 'runs', f'{run_id}'), 'a') as f:
             f.write(f'{epoch} {train_loss} {val_loss}\n')
 
-        save_path = path.join('assets', 'weights', f'lstm-{run_id}-epoch-{epoch}')
+        save_path = path.join('assets', 'weights', f'{run_id}-epoch-{epoch}')
         os.makedirs(save_path, exist_ok=True)
 
         lstm.save(save_path)
 
-    lstm = LSTMClassifier(EMBEDDING_SIZE, hidden_size, 1)
+    # lstm = LSTMClassifier(EMBEDDING_SIZE, hidden_size, 1)
+    lstm = LSTMClassifier.load(path.join('assets', 'weights', 'lstm-lstm-run-3-epoch-8'))
 
     train_lstm_classifier_batched(
         lstm, train_x, train_y, train_s,
@@ -152,27 +153,29 @@ def test() -> None:
     valid_s = np.load(path.join('data', 'test-s.npy'))
 
     lstm = LSTMClassifier(EMBEDDING_SIZE, HIDDEN_STATE_SIZE, 1)
-    lstm.load(path.join('assets', 'weights', 'lstm-run-3-epoch-60'))
+    lstm.load(path.join('assets', 'weights', 'lstm-lstm-run-3-epoch-10'))
 
-    rnn = RNN(EMBEDDING_SIZE, 1, HIDDEN_STATE_SIZE)
-    rnn.load(path.join('assets', 'weights', 'rnn-run-1-epoch-20'))
+    # rnn = RNN(EMBEDDING_SIZE, 1, HIDDEN_STATE_SIZE)
+    # rnn.load(path.join('assets', 'weights', 'rnn-run-1-epoch-20'))
     
     accuracy_lstm = compute_lstm_balanced_accuracy(lstm, valid_x, valid_y, valid_s)
-    accuracy_rnn = compute_rnn_balance_accuracy(rnn, valid_x, valid_y, valid_s)
+    roc_auc = compute_lstm_roc_auc(lstm, valid_x, valid_y, valid_s)
+    # accuracy_rnn = compute_rnn_balance_accuracy(rnn, valid_x, valid_y, valid_s)
 
 
+    print(f'ROC AUC on test set lstm: {roc_auc}')
     print(f'Balanced accuracy on test set lstm: {accuracy_lstm}')
-    print(f'Balanced accuracy on test set rnn: {accuracy_rnn}')
+    # print(f'Balanced accuracy on test set rnn: {accuracy_rnn}')
 
 
 def main():
     # test_overfit()
-    train_lstm(
-        run_id='lstm-run-3',
-        epochs=EPOCHS,
-        lr=LR,
-        hidden_size=HIDDEN_STATE_SIZE,
-    )
+    # train_lstm(
+    #     run_id='lstm-run-3',
+    #     epochs=EPOCHS,
+    #     lr=LR,
+    #     hidden_size=HIDDEN_STATE_SIZE,
+    # )
     # train_rnn(
     #     run_id='rnn-run-1',
     #     epochs=EPOCHS,

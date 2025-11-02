@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from lstm.lstm import LSTMClassifier
 from lstm.train import train_lstm_classifier_batched
 from rnn.rnn import RNN
-from rnn.train import train_rnn
+from rnn.train import train_rnn_classifier
 
 plt.rcParams.update({'font.size': 14})
 
@@ -110,7 +110,7 @@ def plot_gradients_rnns() -> None:
         def accumulate_rnn(grad_h: np.ndarray, e: int, s: int, t: int) -> None:
             gradients_rnn[e, s, t] = grad_h
         
-        train_rnn(rnn, x, y, s, epochs, lr, accumulate_rnn)
+        train_rnn_classifier(rnn, x, y, s, epochs, lr, accumulate_rnn)
 
         grads.append((f"RNN H={h}", f'C{i}', gradients_rnn))
 
@@ -152,7 +152,7 @@ def plot_gradients_rnn_vs_lstm() -> None:
     def accumulate_rnn(grad_h: np.ndarray, e: int, s: int, t: int) -> None:
         gradients_rnn[e, s, t] = grad_h
     
-    train_rnn(rnn, x, y, s, epochs, lr, accumulate_rnn)
+    train_rnn_classifier(rnn, x, y, s, epochs, lr, accumulate_rnn)
 
     plot_gradient_decay([
         ("RNN ∇h", 'C0', gradients_rnn),
@@ -184,6 +184,6 @@ def plot_run(run_id: str) -> None:
     plt.show()
 
 if __name__ == "__main__":
-    plot_gradients_rnn_vs_lstm()
-    # plot_run('lstm-run-3')
+    # plot_gradients_rnn_vs_lstm()
+    plot_run('lstm-run-3')
     #plot_gradients_rnns()
