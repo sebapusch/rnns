@@ -109,6 +109,10 @@ def train_rnn_classifier(rnn: RNN, X: np.ndarray, Y: np.ndarray, S: np.ndarray, 
             
             clip_value = 5.0 
 
+            if np.isnan(grad_Whh).any() or np.isnan(grad_Whx).any() or np.isnan(grad_Woh).any():
+                print('NaN detected in gradients, skipping update...')
+                continue
+
             optimizer.update(rnn.W_oh, np.clip(grad_Woh.mean(axis=0), -clip_value, clip_value), 'Woh')
             optimizer.update(rnn.W_hh, np.clip(grad_Whh.mean(axis=0), -clip_value, clip_value), 'Whh')
             optimizer.update(rnn.W_hx, np.clip(grad_Whx.mean(axis=0), -clip_value, clip_value), 'Whx')

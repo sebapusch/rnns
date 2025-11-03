@@ -16,7 +16,8 @@ plt.rcParams.update({'font.size': 14})
 def plot_gradient_decay(
     grads: list[tuple[str, str, np.ndarray]],
     S: np.ndarray,
-    threshold: float = 1e-12,
+    threshold: tuple[float, float] = (1e-10, 1e6),
+    plot_collapsed: bool = False,
 ) -> None:
     """
     Plot gradient magnitude decay vs number of backpropagated steps.
@@ -35,6 +36,7 @@ def plot_gradient_decay(
 
     max_depth = S.max() - 1
 
+
     def compute_stats(grad: np.ndarray, S: np.ndarray):
         E, N, T, H = grad.shape
         grad_l2 = np.linalg.norm(grad, axis=3)  # (E, N, T)
@@ -52,7 +54,7 @@ def plot_gradient_decay(
                         continue
                     val = grad_l2[e, n, t]
                     total[d-1] += 1
-                    if val > threshold:
+                    if val > threshold[0] and val < threshold[1]:
                         values_per_d[d-1].append(val)
                     else:
                         collapsed[d-1] += 1
@@ -76,7 +78,7 @@ def plot_gradient_decay(
     for label, color, grad in grads:
         med, q25, q75 = compute_stats(grad, S)
 
-        plt.plot(depths, med, label=f"{label} ∇h", color=color)
+        plt.plot(depths, med, label=label, color=color)
         plt.fill_between(depths, q25, q75, color=color, alpha=0.3)
 
     plt.yscale("log")
@@ -87,6 +89,45 @@ def plot_gradient_decay(
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+    if plot_collapsed:
+        # plot collapsed ratios
+
+        plt.figure(figsize=(12, 6))
+        for label, color, grad in grads:
+            E, N, T, H = grad.shape
+
+            collapsed = np.zeros(max_depth, dtype=int)
+            total = np.zeros(max_depth, dtype=int)
+
+            grad_l2 = np.linalg.norm(grad, axis=3)  # (E, N, T)
+
+            for e in range(E):
+                for n in range(N):
+                    seq_len = min(S[n], T)
+                    for t in range(seq_len):
+                        d = seq_len - t  # number of backprop steps (1 = last)
+                        if d > max_depth:
+                            continue
+                        val = grad_l2[e, n, t]
+                        total[d-1] += 1
+                        if val <= threshold[0] or val >= threshold[1]:
+                            collapsed[d-1] += 1
+
+            collapsed_ratio = collapsed / total
+            collapsed_ratio[0:2] = 0.0  # ignore first two depths for better visualization
+
+            plt.plot(depths, collapsed_ratio, label=label, color=color)
+
+        plt.xlabel("Number of backpropagated steps (depth)")
+        # write label, format number in scientific notation
+        label = f'[{threshold[0]:.1e}, {threshold[1]:.1e}]'
+        plt.ylabel(f"Ratio of gradients outside {label}")
+        plt.title(f"Collapsed gradient ratio vs. backpropagation depth")
+        plt.grid(True, axis="y", linestyle="--", alpha=0.6)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
 
 def plot_gradients_rnns() -> None:
@@ -119,14 +160,14 @@ def plot_gradients_rnns() -> None:
 
 def plot_gradients_rnn_vs_lstm() -> None:
     epochs = 10
-    lr = 0.0005
+    lr = 0.00005
 
     N = 5000
-    H = 16
+    H = 64
 
-    x = np.load(path.join('data', 't-10000-s-123-x.npy'))[3000:3000 + N]
-    y = np.load(path.join('data', 't-10000-s-123-y.npy'))[3000:3000 + N]
-    s = np.load(path.join('data', 't-10000-s-123-s.npy'))[3000:3000 + N]
+    x = np.load(path.join('data', 'train-x.npy'))[3000:3000 + N]
+    y = np.load(path.join('data', 'train-y.npy'))[3000:3000 + N]
+    s = np.load(path.join('data', 'train-s.npy'))[3000:3000 + N]
 
     gradients_lstm_h = np.zeros((epochs, N, s.max(), H))
     gradients_lstm_c = np.zeros((epochs, N, s.max(), H))
@@ -158,7 +199,7 @@ def plot_gradients_rnn_vs_lstm() -> None:
         ("RNN ∇h", 'C0', gradients_rnn),
         ("LSTM ∇h", 'C1', gradients_lstm_h),
         ("LSTM ∇c", 'C2', gradients_lstm_c),
-    ], s)
+    ], s, plot_collapsed=True)
 
 
 def plot_run(run_id: str) -> None:
@@ -183,7 +224,23 @@ def plot_run(run_id: str) -> None:
     plt.grid(True)
     plt.show()
 
+
+def plot_sentence_lengths() -> None:
+    s = np.load(path.join('data', 'train-s.npy'))
+
+    print(f'Sentence lengths: min={s.min()}, max={s.max()}, mean={s.mean():.2f}, median={np.median(s)}')
+
+    plt.figure(figsize=(10, 5))
+    plt.hist(s, bins=range(1, s.max() + 2), align='left', edgecolor='black')
+    plt.xlabel('Sentence Length')
+    plt.ylabel('Frequency')
+    plt.title('Distribution of Sentence Lengths')
+    plt.grid(axis='y')
+    plt.show()
+
+
 if __name__ == "__main__":
     # plot_gradients_rnn_vs_lstm()
-    plot_run('lstm-run-3')
+    # plot_run('lstm-run-3')
+    plot_sentence_lengths()
     #plot_gradients_rnns()
