@@ -31,7 +31,7 @@ You’ll need:
 - Python 3.10+
 - Required packages (install via pip):
 
-pip install numpy datasets tqdm scikit-learn matplotlib
+`pip install numpy datasets tqdm scikit-learn matplotlib`
 
 Make sure [GloVe-like embeddings](https://nlp.stanford.edu/projects/glove/) (100D) are available in:
 `assets/embeddings/wiki_giga_2024_100_MFT20_vectors_seed_2024_alpha_0.75_eta_0.05.050_combined.txt`
@@ -41,7 +41,7 @@ Data Preprocessing
 
 Run the following script to generate train/validation/test splits in `.npy` format using SST-2 with GloVe embeddings:
 
-python scripts/preprocessing.py
+`python scripts/preprocessing.py`
 
 This will save the data to the `data/` folder.
 
@@ -92,5 +92,7 @@ Notes
 - Embeddings are static (non-trainable) and based on GloVe.
 - Only the final output of the RNN/LSTM is used for loss computation (sequence classification).
 - Manual weight initialization and batching were used to improve trainability.
+
+
 
 
