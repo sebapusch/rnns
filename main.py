@@ -120,8 +120,8 @@ def train_lstm(
 
         lstm.save(save_path)
 
-    # lstm = LSTMClassifier(EMBEDDING_SIZE, hidden_size, 1)
-    lstm = LSTMClassifier.load(path.join('assets', 'weights', 'lstm-lstm-run-3-epoch-8'))
+    lstm = LSTMClassifier(EMBEDDING_SIZE, hidden_size, 1)
+    # lstm = LSTMClassifier.load(path.join('assets', 'weights', 'lstm-lstm-run-3-epoch-8'))
 
     train_lstm_classifier_batched(
         lstm, train_x, train_y, train_s,
